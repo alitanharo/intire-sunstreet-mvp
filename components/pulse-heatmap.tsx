@@ -37,7 +37,7 @@ export function PulseHeatmap({ turnovers }: PulseHeatmapProps) {
     <Card className="h-[420px]">
       <CardHeader>
         <CardTitle>THE PULSE HEATMAP</CardTitle>
-        <CardDescription>Coin360-style market intensity by true SEK/MW turnover</CardDescription>
+        <CardDescription>Intire-Sunstreet market intensity by true SEK/MW turnover</CardDescription>
       </CardHeader>
       <CardContent className="h-[330px]">
         <ResponsiveTreeMapHtml
