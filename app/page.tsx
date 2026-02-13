@@ -1,4 +1,5 @@
 import { Activity, BatteryCharging, BatteryWarning, Clock3, Zap } from "lucide-react";
+import Image from "next/image";
 
 import { AgenticPilot } from "@/components/agentic-pilot";
 import { DashboardVisuals } from "@/components/dashboard-visuals";
@@ -29,6 +30,17 @@ export default async function Home({
     <main className="mx-auto min-h-screen w-full max-w-[1400px] px-6 py-8 md:px-10 md:py-10">
       <header className="mb-8 flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
         <div>
+          <div className="mb-4 inline-flex items-center rounded-lg border border-white/20 bg-white/95 px-3 py-2 shadow-sm">
+            <Image
+              src="/Sunstreet_Horisontell_Svart.png"
+              alt="Sunstreet"
+              width={220}
+              height={42}
+              priority
+              className="h-auto w-[150px] object-contain sm:w-[190px] md:w-[220px]"
+            />
+          </div>
+
           <Badge className="mb-3" variant="default">
             SE3 • STOCKHOLM • 48H STRATEGY ENGINE
           </Badge>
