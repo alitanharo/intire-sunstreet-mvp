@@ -1,16 +1,29 @@
-import { Activity, Clock3, Zap } from "lucide-react";
+import { Activity, BatteryCharging, BatteryWarning, Clock3, Zap } from "lucide-react";
 
 import { AgenticPilot } from "@/components/agentic-pilot";
 import { DashboardVisuals } from "@/components/dashboard-visuals";
 import { KpiCards } from "@/components/kpi-cards";
+import { SiteSelector } from "@/components/site-selector";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getDashboardSnapshot } from "@/lib/dashboard-service";
+import { formatMw } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
-  const snapshot = await getDashboardSnapshot();
+function statusLabel(status: "charging" | "discharging" | "idle") {
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ site?: string }>;
+}) {
+  const params = await searchParams;
+  const snapshot = await getDashboardSnapshot(params?.site);
+
+  const liveStatusText = `Site #${snapshot.activeSite.id} | ${snapshot.activeSite.name.split(" ")[0]} | SOC: ${snapshot.activeSite.soc}% | ${statusLabel(snapshot.activeSite.status)} ${formatMw(snapshot.activeSite.livePowerMw)}`;
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-[1400px] px-6 py-8 md:px-10 md:py-10">
@@ -26,6 +39,18 @@ export default async function Home() {
             AI-guided balancing and spot market allocation with true turnover calculations in SEK/MW.
             Built for high-performance decisioning in Swedish ancillary markets.
           </p>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <SiteSelector sites={snapshot.sites} activeSiteId={snapshot.activeSite.id} />
+            <Badge variant="default" className="border-white/20 bg-slate-900/70 px-3 py-1.5 text-slate-100">
+              {snapshot.activeSite.status === "charging" ? (
+                <BatteryCharging className="mr-2 h-4 w-4 text-[var(--accent)] soc-charging" />
+              ) : (
+                <BatteryWarning className="mr-2 h-4 w-4 text-[var(--warning)] soc-discharging" />
+              )}
+              {liveStatusText}
+            </Badge>
+          </div>
         </div>
         <div className="grid w-full gap-3 sm:grid-cols-3 lg:w-auto">
           <Card className="min-w-[180px]">
@@ -56,7 +81,10 @@ export default async function Home() {
               <Zap className="h-4 w-4 text-[var(--accent)]" />
               <div>
                 <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Mode</div>
-                <div className="text-sm text-slate-200">Agentic Live</div>
+                <div className="text-sm text-slate-200">
+                  <span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-[var(--accent)] live-dot" />
+                  Agentic Live
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -65,17 +93,22 @@ export default async function Home() {
 
       <KpiCards
         topMarketRecommendation={snapshot.topRecommendation}
-        turnover48hSekMw={snapshot.turnover48hSekMw}
-        revenueAlphaVsBaseline={snapshot.revenueAlphaVsBaseline}
+        turnover48hSek={snapshot.turnover48hSek}
+        revenueAlphaPct={snapshot.strategyComparison.revenueAlphaPct}
+        budgetProgressPct={snapshot.budgetProgressPct}
       />
 
-      <DashboardVisuals forecast={snapshot.forecast} turnovers={snapshot.turnovers} />
+      <DashboardVisuals
+        timeline={snapshot.timeline}
+        turnovers={snapshot.turnovers}
+        strategyComparison={snapshot.strategyComparison}
+      />
 
       <section className="mt-6 grid gap-4 lg:grid-cols-5">
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-4">
           <AgenticPilot insight={snapshot.reasoning} />
         </div>
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-1">
           <Card>
             <CardHeader>
               <CardTitle>Bid Split Recommendation</CardTitle>

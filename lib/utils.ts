@@ -18,3 +18,7 @@ export function formatNumber(value: number, maximumFractionDigits = 1) {
     maximumFractionDigits,
   }).format(value);
 }
+
+export function formatMw(value: number, maximumFractionDigits = 3) {
+  return `${formatNumber(value, maximumFractionDigits)} MW`;
+}

@@ -5,6 +5,8 @@ High-performance Energy Bidding Optimization platform for Independent Power Prod
 Focus area: **SE3 (Stockholm)**.  
 Goal: predict and recommend the most profitable market across **FCR-N, FCR-D, mFRR, Spot** on a 48-hour horizon.
 
+This repo is now upgraded to an operational **V3 dashboard**: site-aware strategy engine, hybrid timeline (7d history + 48h forecast), budget tracking, confidence scoring, and a tightly-packed professional market heatmap.
+
 ---
 
 ## Tech Stack (latest stable)
@@ -14,7 +16,8 @@ Goal: predict and recommend the most profitable market across **FCR-N, FCR-D, mF
 - **TypeScript 5**
 - **Tailwind CSS 4**
 - **Nivo Treemap** (Pulse Heatmap)
-- **Recharts** (48h Forecast chart)
+- **Recharts** (Hybrid Timeline + budget line)
+- **Framer Motion** (smooth site-switch transitions)
 - **lucide-react** icons
 - **Firebase SDK** and **BigQuery SDK** included for real-data integration
 
@@ -36,7 +39,11 @@ Formulas:
 - **mFRR Turnover:** `Price * 0.83 * 11 * 1.2`
 - **Spot Arbitrage Rule:** If `(Daily_Max_Price - Daily_Min_Price) * 11 > Calculated_24h_FCR_Profit` then recommend **"SPOT MARKET"**
 
-All dashboard market sizing and recommendation logic uses these conversions to display **True Turnover (SEK/MW)**.
+All dashboard market sizing and recommendation logic uses these conversions to display **True Turnover**, then scales by selected site capacity for **actual predicted revenue (SEK)**.
+
+Additional simulator logic:
+- **AI Strategy Revenue** vs **Static FCR-N Baseline**
+- Static baseline holds fixed **45% capacity** regardless of market spikes.
 
 ---
 
@@ -74,24 +81,36 @@ Use `DATA_SOURCE=mock|real` to switch.
 
 ---
 
-## Implemented UI Components
+## Implemented UI Components (V3)
+
+- **Global Site Selector + Live Telemetry**
+  - Active site selection via URL param (`?site=1011`)
+  - Live badge with SOC/status/power and animated charging/discharging states
 
 - **KPI Cards**
-  - Top Market Recommendation
-  - Predicted 48h Turnover
+  - Top Market Recommendation (pulse highlight when FCR-D)
+  - Predicted 48h Turnover (site-scaled SEK)
   - Revenue Alpha vs Baseline
+  - Month Progress vs Budget (%)
 
-- **The Pulse Heatmap** (`components/pulse-heatmap.tsx`)
-  - Treemap of FCR-N, FCR-D, mFRR, Spot
-  - Box size = SEK turnover
-  - Color = profitability trend
+- **Pulse Heatmap** (`components/pulse-heatmap.tsx`)
+  - Tightly-packed professional market mosaic (no wasted space)
+  - Operational market intensity by true turnover (SEK)
+  - Per-market share percentage label
 
-- **The 48H Forecast Chart** (`components/forecast-chart.tsx`)
-  - Multi-line chart for ancillary/spot predictions
+- **Hybrid Timeline Chart** (`components/hybrid-timeline-chart.tsx`)
+  - Past 7 days + next 48 hours
+  - NOW marker
+  - Ancillary toggles (FCR-D Up/Down, FCR-N, mFRR, Spot)
+  - **Budget per hour line**
 
-- **Agentic Pilot** (`components/agentic-pilot.tsx`)
-  - Human-readable AI strategy insight
-  - Combines forecast + weather + production gap logic
+- **Alpha Strategy Comparison**
+  - AI Optimized vs FCR-N Standard bars
+  - Revenue alpha emphasis
+
+- **Agentic Pilot V2**
+  - Site-aware reasoning recommendations
+  - Confidence label + numeric confidence score (0-100%)
 
 Theme: **Deep Grid** (dark slate/blues + neon green profit accents + amber warnings)
 
@@ -103,7 +122,14 @@ Theme: **Deep Grid** (dark slate/blues + neon green profit accents + amber warni
 - `GET /api/recommendations`
 - `GET /api/history`
 
-All return mock JSON by default, while maintaining a clear path for Firestore/BigQuery production integration.
+`/api/history` now includes:
+- `historical_prices`
+- `hybrid_timeline`
+- `budget_line`
+- `weather_hourly`
+- `production_gap`
+
+All routes return mock JSON by default, while maintaining a clear path for Firestore/BigQuery production integration.
 
 ---
 

@@ -1,17 +1,21 @@
 import {
+  budgetLine,
   forecastSeries,
   historicalPrices,
   predictions,
   productionGapSeries,
   recommendations,
+  timelineSeries,
   weatherSeries,
 } from "@/data/mockData";
 import type {
   ForecastSeriesPoint,
+  BudgetLinePoint,
   HistoricalPricePoint,
   PredictionDoc,
   ProductionGapPoint,
   RecommendationDoc,
+  TimelinePoint,
   WeatherPoint,
 } from "@/types/market";
 
@@ -19,6 +23,8 @@ export interface MarketDataProvider {
   getPredictions(): Promise<PredictionDoc[]>;
   getRecommendations(): Promise<RecommendationDoc[]>;
   getForecastSeries(): Promise<ForecastSeriesPoint[]>;
+  getTimelineSeries(): Promise<TimelinePoint[]>;
+  getBudgetLineSeries(): Promise<BudgetLinePoint[]>;
   getHistoricalPrices(): Promise<HistoricalPricePoint[]>;
   getWeatherSeries(): Promise<WeatherPoint[]>;
   getProductionGapSeries(): Promise<ProductionGapPoint[]>;
@@ -35,6 +41,14 @@ class MockMarketDataProvider implements MarketDataProvider {
 
   async getForecastSeries() {
     return forecastSeries;
+  }
+
+  async getTimelineSeries() {
+    return timelineSeries;
+  }
+
+  async getBudgetLineSeries() {
+    return budgetLine;
   }
 
   async getHistoricalPrices() {
@@ -65,6 +79,12 @@ class RealMarketDataProvider implements MarketDataProvider {
   }
   async getForecastSeries() {
     return this.notConfigured("forecastSeries");
+  }
+  async getTimelineSeries() {
+    return this.notConfigured("timelineSeries");
+  }
+  async getBudgetLineSeries() {
+    return this.notConfigured("budgetLineSeries");
   }
   async getHistoricalPrices() {
     return this.notConfigured("historicalPrices");

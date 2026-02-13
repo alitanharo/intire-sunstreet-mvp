@@ -1,4 +1,9 @@
-import type { ForecastSeriesPoint, MarketTurnoverPoint } from "@/types/market";
+import type {
+  ForecastSeriesPoint,
+  MarketTurnoverPoint,
+  SiteConfig,
+  StrategyComparison,
+} from "@/types/market";
 
 export const EURO_TO_SEK = 11;
 export const FCR_D_CAPACITY_FACTOR = 0.83;
@@ -39,6 +44,7 @@ export function calculate24hFcrProfit(forecast: ForecastSeriesPoint[]): number {
 
 export function deriveTurnoversFromForecast(
   forecast: ForecastSeriesPoint[],
+  activeSite: SiteConfig,
 ): MarketTurnoverPoint[] {
   const avgFcrNPrice = avg(forecast.map((point) => point.fcrN));
   const avgFcrDUp = avg(forecast.map((point) => point.fcrDUp));
@@ -49,10 +55,10 @@ export function deriveTurnoversFromForecast(
   const dailyMin = Math.min(...spotPrices);
   const dailyMax = Math.max(...spotPrices);
 
-  const fcrNTurnover = calculateFcrNTurnover(avgFcrNPrice);
-  const fcrDTurnover = calculateFcrDTurnover(avgFcrDUp, avgFcrDDown);
-  const mfrrTurnover = calculateMfrrTurnover(avgMfrrPrice);
-  const spotTurnover = calculateSpotSpreadProfit(dailyMin, dailyMax) * EURO_TO_SEK;
+  const fcrNTurnover = calculateFcrNTurnover(avgFcrNPrice) * activeSite.capacity;
+  const fcrDTurnover = calculateFcrDTurnover(avgFcrDUp, avgFcrDDown) * activeSite.capacity;
+  const mfrrTurnover = calculateMfrrTurnover(avgMfrrPrice) * activeSite.capacity;
+  const spotTurnover = calculateSpotSpreadProfit(dailyMin, dailyMax) * EURO_TO_SEK * activeSite.capacity;
 
   const maxValue = Math.max(fcrNTurnover, fcrDTurnover, mfrrTurnover, spotTurnover);
 
@@ -64,17 +70,20 @@ export function deriveTurnoversFromForecast(
   };
 
   return [
-    { market: "FCR-N", turnoverSekMw: fcrNTurnover, trend: classifyTrend(fcrNTurnover) },
-    { market: "FCR-D", turnoverSekMw: fcrDTurnover, trend: classifyTrend(fcrDTurnover) },
-    { market: "mFRR", turnoverSekMw: mfrrTurnover, trend: classifyTrend(mfrrTurnover) },
-    { market: "Spot", turnoverSekMw: spotTurnover, trend: classifyTrend(spotTurnover) },
+    { market: "FCR-N", turnoverSek: fcrNTurnover, trend: classifyTrend(fcrNTurnover) },
+    { market: "FCR-D", turnoverSek: fcrDTurnover, trend: classifyTrend(fcrDTurnover) },
+    { market: "mFRR", turnoverSek: mfrrTurnover, trend: classifyTrend(mfrrTurnover) },
+    { market: "Spot", turnoverSek: spotTurnover, trend: classifyTrend(spotTurnover) },
   ];
 }
 
-export function getTopMarketRecommendation(forecast: ForecastSeriesPoint[]): string {
-  const turnovers = deriveTurnoversFromForecast(forecast);
+export function getTopMarketRecommendation(
+  forecast: ForecastSeriesPoint[],
+  activeSite: SiteConfig,
+): string {
+  const turnovers = deriveTurnoversFromForecast(forecast, activeSite);
   const best = turnovers.reduce((currentBest, item) =>
-    item.turnoverSekMw > currentBest.turnoverSekMw ? item : currentBest,
+    item.turnoverSek > currentBest.turnoverSek ? item : currentBest,
   );
 
   const first24 = forecast.slice(0, 24);
@@ -90,4 +99,29 @@ export function getTopMarketRecommendation(forecast: ForecastSeriesPoint[]): str
   }
 
   return best.market;
+}
+
+export function simulateStrategyPerformance(
+  forecast: ForecastSeriesPoint[],
+  activeSite: SiteConfig,
+): StrategyComparison {
+  const aiRevenue = deriveTurnoversFromForecast(forecast, activeSite).reduce(
+    (sum, item) => sum + item.turnoverSek,
+    0,
+  );
+
+  const avgFcrN = avg(forecast.map((point) => point.fcrN));
+  const staticFcrnRevenue =
+    calculateFcrNTurnover(avgFcrN) * activeSite.capacity * FCR_N_CAPACITY_FACTOR;
+
+  const revenueAlphaPct =
+    staticFcrnRevenue > 0
+      ? ((aiRevenue - staticFcrnRevenue) / staticFcrnRevenue) * 100
+      : 0;
+
+  return {
+    totalAiStrategyRevenue: aiRevenue,
+    staticFcrnRevenue,
+    revenueAlphaPct,
+  };
 }

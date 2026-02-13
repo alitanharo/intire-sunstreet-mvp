@@ -16,22 +16,22 @@ function mapConfidenceToVariant(confidence: ReasoningInsight["confidence"]) {
 
 export function AgenticPilot({ insight }: AgenticPilotProps) {
   return (
-    <Card>
+    <Card className="neon-glow-card h-full">
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <CardTitle className="flex items-center gap-2">
               <BrainCircuit className="h-4 w-4 text-[var(--accent)]" />
-              AGENTIC PILOT
+              AGENTIC PILOT V2
             </CardTitle>
             <CardDescription className="mt-1">Server-side reasoning from forecast + context drivers</CardDescription>
           </div>
           <Badge variant={mapConfidenceToVariant(insight.confidence)}>
-            Confidence {insight.confidence}
+            Confidence {insight.confidence} ({insight.confidenceScore}%)
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 min-h-[320px]">
         <p className="text-sm leading-7 text-slate-200">{insight.summary}</p>
         <p className="rounded-xl border border-white/10 bg-slate-900/40 p-4 text-sm font-medium text-[var(--accent)]">
           {insight.strategy}

@@ -1,9 +1,11 @@
 import {
+  type BudgetLinePoint,
   type ForecastSeriesPoint,
   type HistoricalPricePoint,
   type PredictionDoc,
   type ProductionGapPoint,
   type RecommendationDoc,
+  type TimelinePoint,
   type WeatherPoint,
 } from "@/types/market";
 
@@ -24,27 +26,77 @@ function round(value: number, precision = 2) {
   return Math.round(value * p) / p;
 }
 
-export const forecastSeries: ForecastSeriesPoint[] = Array.from(
-  { length: 48 },
-  (_, index) => {
-    const timestamp = plusHours(NOW, index + 1);
-    const cycle = Math.sin(index / 5);
-    const highRiskPulse = index > 16 && index < 28 ? 18 : 0;
+function buildPriceVector(date: Date, horizonShift = 0) {
+  const hour = date.getHours();
+  const dayCycle = Math.sin((hour / 24) * Math.PI * 2);
+  const weeklyCycle = Math.sin((date.getDate() + horizonShift) / 3.2);
+  const eveningSpike = hour >= 17 && hour <= 20 ? 8.5 : 0;
 
-    return {
-      timestamp: toIso(timestamp),
-      hourLabel: timestamp.toLocaleTimeString("sv-SE", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      fcrN: round(16 + cycle * 3 + highRiskPulse * 0.2),
-      fcrDUp: round(24 + cycle * 4 + highRiskPulse * 0.5),
-      fcrDDown: round(12 + cycle * 2 + highRiskPulse * 0.25),
-      mfrr: round(28 + cycle * 6 + highRiskPulse * 0.65),
-      spot: round(34 + Math.cos(index / 4) * 7 + highRiskPulse * 0.15),
-    };
-  },
-);
+  return {
+    fcrN: round(15 + dayCycle * 2 + weeklyCycle * 1.6),
+    fcrDUp: round(23 + dayCycle * 3 + weeklyCycle * 2.2 + eveningSpike),
+    fcrDDown: round(12 + dayCycle * 1.4 + weeklyCycle * 1.2 + eveningSpike * 0.35),
+    mfrr: round(27 + dayCycle * 4.5 + weeklyCycle * 2.5 + eveningSpike * 0.75),
+    spot: round(33 + dayCycle * 5 + weeklyCycle * 2.1 + eveningSpike * 0.25),
+  };
+}
+
+function buildBudgetValue(date: Date) {
+  const hour = date.getHours();
+  const peakAdder = hour >= 17 && hour <= 21 ? 6.4 : 0;
+  return round(24 + Math.sin((hour / 24) * Math.PI * 2) * 2.6 + peakAdder);
+}
+
+export const historicalTimeline: TimelinePoint[] = Array.from({ length: 24 * 7 }, (_, i) => {
+  const date = plusHours(NOW, -(24 * 7 - 1 - i));
+  const vector = buildPriceVector(date, -2);
+
+  return {
+    timestamp: toIso(date),
+    label: date.toLocaleString("sv-SE", { month: "2-digit", day: "2-digit", hour: "2-digit" }),
+    kind: "historical",
+    isNowMarker: i === 24 * 7 - 1,
+    budget: buildBudgetValue(date),
+    ...vector,
+  };
+});
+
+export const forecastSeries: ForecastSeriesPoint[] = Array.from({ length: 48 }, (_, index) => {
+  const timestamp = plusHours(NOW, index + 1);
+  const vector = buildPriceVector(timestamp, 4);
+
+  return {
+    timestamp: toIso(timestamp),
+    hourLabel: timestamp.toLocaleTimeString("sv-SE", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    ...vector,
+  };
+});
+
+export const forecastTimeline: TimelinePoint[] = forecastSeries.map((point) => ({
+  timestamp: point.timestamp,
+  label: new Date(point.timestamp).toLocaleString("sv-SE", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+  }),
+  kind: "forecast",
+  budget: buildBudgetValue(new Date(point.timestamp)),
+  fcrN: point.fcrN,
+  fcrDUp: point.fcrDUp,
+  fcrDDown: point.fcrDDown,
+  mfrr: point.mfrr,
+  spot: point.spot,
+}));
+
+export const timelineSeries: TimelinePoint[] = [...historicalTimeline, ...forecastTimeline];
+
+export const budgetLine: BudgetLinePoint[] = timelineSeries.map((point) => ({
+  timestamp: point.timestamp,
+  budget: point.budget,
+}));
 
 export const predictions: PredictionDoc[] = forecastSeries.flatMap((point) => {
   const generatedAt = toIso(NOW);
@@ -83,9 +135,9 @@ export const recommendations: RecommendationDoc[] = [
   {
     timestamp: toIso(NOW),
     bid_time_48h: toIso(plusHours(NOW, 48)),
-    fcr_split: 0.46,
-    mfrr_split: 0.28,
-    mfrr_cm_split: 0.14,
+    fcr_split: 0.52,
+    mfrr_split: 0.24,
+    mfrr_cm_split: 0.12,
     spot_split: 0.12,
   },
 ];
@@ -95,37 +147,32 @@ export const weatherSeries: WeatherPoint[] = Array.from({ length: 48 }, (_, i) =
   return {
     timestamp: toIso(t),
     area: "SE3",
-    wind_ms: round(3.8 + Math.sin(i / 6) * 1.7 - (i > 18 && i < 30 ? 1.2 : 0), 1),
-    temperature_c: round(-2 + Math.cos(i / 8) * 4 - (i > 20 && i < 32 ? 2.5 : 0), 1),
+    wind_ms: round(3.5 + Math.sin(i / 5) * 1.6 - (i > 17 && i < 30 ? 1.1 : 0), 1),
+    temperature_c: round(-1.8 + Math.cos(i / 8) * 4 - (i > 20 && i < 33 ? 2.3 : 0), 1),
   };
 });
 
-export const productionGapSeries: ProductionGapPoint[] = Array.from(
-  { length: 48 },
-  (_, i) => {
-    const t = plusHours(NOW, i + 1);
-    const production = 8350 + Math.cos(i / 5) * 620 - (i > 17 && i < 31 ? 520 : 0);
-    const consumption = 8720 + Math.sin(i / 4) * 540 + (i > 17 && i < 31 ? 680 : 0);
+export const productionGapSeries: ProductionGapPoint[] = Array.from({ length: 48 }, (_, i) => {
+  const t = plusHours(NOW, i + 1);
+  const production = 8350 + Math.cos(i / 5) * 600 - (i > 17 && i < 31 ? 540 : 0);
+  const consumption = 8720 + Math.sin(i / 4) * 560 + (i > 17 && i < 31 ? 700 : 0);
 
-    return {
-      timestamp: toIso(t),
-      area: "SE3",
-      production_mw: round(production, 0),
-      consumption_mw: round(consumption, 0),
-      gap_mw: round(production - consumption, 0),
-    };
+  return {
+    timestamp: toIso(t),
+    area: "SE3",
+    production_mw: round(production, 0),
+    consumption_mw: round(consumption, 0),
+    gap_mw: round(production - consumption, 0),
+  };
+});
+
+export const historicalPrices: HistoricalPricePoint[] = historicalTimeline.flatMap((point) => [
+  { timestamp: point.timestamp, market: "FCR-N" as const, cleared_price: point.fcrN },
+  {
+    timestamp: point.timestamp,
+    market: "FCR-D" as const,
+    cleared_price: point.fcrDUp + point.fcrDDown,
   },
-);
-
-export const historicalPrices: HistoricalPricePoint[] = forecastSeries
-  .slice(0, 24)
-  .flatMap((point) => [
-    { timestamp: point.timestamp, market: "FCR-N" as const, cleared_price: point.fcrN - 2 },
-    {
-      timestamp: point.timestamp,
-      market: "FCR-D" as const,
-      cleared_price: point.fcrDUp + point.fcrDDown - 3,
-    },
-    { timestamp: point.timestamp, market: "mFRR" as const, cleared_price: point.mfrr - 2 },
-    { timestamp: point.timestamp, market: "Spot" as const, cleared_price: point.spot - 1 },
-  ]);
+  { timestamp: point.timestamp, market: "mFRR" as const, cleared_price: point.mfrr },
+  { timestamp: point.timestamp, market: "Spot" as const, cleared_price: point.spot },
+]);

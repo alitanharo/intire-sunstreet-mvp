@@ -1,4 +1,5 @@
 export type AncillaryMarket = "FCR-N" | "FCR-D" | "mFRR" | "Spot";
+export type SiteStatus = "charging" | "discharging" | "idle";
 
 export interface PredictionDoc {
   time_generated: string;
@@ -49,26 +50,65 @@ export interface ForecastSeriesPoint {
   spot: number;
 }
 
+export interface TimelinePoint {
+  timestamp: string;
+  label: string;
+  kind: "historical" | "forecast";
+  isNowMarker?: boolean;
+  fcrN: number;
+  fcrDUp: number;
+  fcrDDown: number;
+  mfrr: number;
+  spot: number;
+  budget: number;
+}
+
+export interface BudgetLinePoint {
+  timestamp: string;
+  budget: number;
+}
+
+export interface SiteConfig {
+  id: string;
+  name: string;
+  capacity: number;
+  type: string;
+  soc: number;
+  status: SiteStatus;
+  livePowerMw: number;
+}
+
 export interface MarketTurnoverPoint {
   market: AncillaryMarket;
-  turnoverSekMw: number;
+  turnoverSek: number;
   trend: "high" | "mid" | "low";
+}
+
+export interface StrategyComparison {
+  totalAiStrategyRevenue: number;
+  staticFcrnRevenue: number;
+  revenueAlphaPct: number;
 }
 
 export interface ReasoningInsight {
   summary: string;
   strategy: string;
   confidence: "High" | "Medium" | "Low";
+  confidenceScore: number;
   drivers: string[];
 }
 
 export interface DashboardSnapshot {
   generatedAt: string;
+  activeSite: SiteConfig;
+  sites: SiteConfig[];
   forecast: ForecastSeriesPoint[];
+  timeline: TimelinePoint[];
   turnovers: MarketTurnoverPoint[];
   topRecommendation: string;
-  turnover48hSekMw: number;
-  revenueAlphaVsBaseline: number;
+  turnover48hSek: number;
+  budgetProgressPct: number;
+  strategyComparison: StrategyComparison;
   reasoning: ReasoningInsight;
   recommendations: RecommendationDoc[];
 }

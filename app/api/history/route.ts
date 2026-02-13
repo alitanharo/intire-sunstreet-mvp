@@ -4,8 +4,10 @@ import { getMarketDataProvider } from "@/lib/data-provider";
 
 export async function GET() {
   const provider = getMarketDataProvider();
-  const [historicalPrices, weather, productionGap] = await Promise.all([
+  const [historicalPrices, timeline, budgetLine, weather, productionGap] = await Promise.all([
     provider.getHistoricalPrices(),
+    provider.getTimelineSeries(),
+    provider.getBudgetLineSeries(),
     provider.getWeatherSeries(),
     provider.getProductionGapSeries(),
   ]);
@@ -14,6 +16,8 @@ export async function GET() {
     source: process.env.DATA_SOURCE ?? "mock",
     tables: {
       historical_prices: historicalPrices,
+      hybrid_timeline: timeline,
+      budget_line: budgetLine,
       weather_hourly: weather,
       production_gap: productionGap,
     },

@@ -46,6 +46,66 @@ body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
+@keyframes neonPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(124, 255, 100, 0), 0 0 22px rgba(124, 255, 100, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(124, 255, 100, 0.7), 0 0 34px rgba(124, 255, 100, 0.45);
+  }
+}
+
+@keyframes liveBlink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes outwardGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 6px rgba(247, 165, 53, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(247, 165, 53, 0.8), 0 0 26px rgba(247, 165, 53, 0.5);
+  }
+}
+
+@keyframes inwardPulse {
+  0%,
+  100% {
+    box-shadow: inset 0 0 3px rgba(124, 255, 100, 0.35);
+  }
+  50% {
+    box-shadow: inset 0 0 11px rgba(124, 255, 100, 0.8);
+  }
+}
+
+.neon-glow-card {
+  box-shadow: 0 0 22px rgba(93, 163, 255, 0.25);
+}
+
+.neon-top-market {
+  animation: neonPulse 2s ease-in-out infinite;
+}
+
+.live-dot {
+  animation: liveBlink 1.2s ease-in-out infinite;
+}
+
+.soc-discharging {
+  animation: outwardGlow 1.5s ease-in-out infinite;
+}
+
+.soc-charging {
+  animation: inwardPulse 1.5s ease-in-out infinite;
+}
+
 .glass-card {
   background: linear-gradient(
     145deg,
