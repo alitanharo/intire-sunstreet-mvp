@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 
 import { AlphaStrategyCard } from "@/components/alpha-strategy-card";
 import { HybridTimelineChart } from "@/components/hybrid-timeline-chart";
+import { ProofOfAccuracyChart } from "@/components/proof-of-accuracy-chart";
 import { PulseHeatmap } from "@/components/pulse-heatmap";
 import type { MarketTurnoverPoint, StrategyComparison, TimelinePoint } from "@/types/market";
 
@@ -32,6 +33,7 @@ export function DashboardVisuals({ timeline, turnovers, strategyComparison }: Da
           <AlphaStrategyCard strategyComparison={strategyComparison} />
         </div>
       </div>
+      <ProofOfAccuracyChart timeline={timeline} />
     </section>
   );
 }

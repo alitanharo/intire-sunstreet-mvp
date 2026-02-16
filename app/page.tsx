@@ -62,6 +62,14 @@ export default async function Home({
               )}
               {liveStatusText}
             </Badge>
+            <Badge
+              variant={snapshot.connection.connected ? "success" : "warning"}
+              className="px-3 py-1.5"
+              title={snapshot.connection.message}
+            >
+              {snapshot.connection.connected ? "Live Database Connected" : "Live DB Disconnected"} •{" "}
+              {snapshot.connection.sourceLabel}
+            </Badge>
           </div>
         </div>
         <div className="grid w-full gap-3 sm:grid-cols-3 lg:w-auto">

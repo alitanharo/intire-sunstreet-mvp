@@ -40,3 +40,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# firebase
+serviceaccount-key.json
+serviceaccount.json
+
+# local scratch
+Untitled

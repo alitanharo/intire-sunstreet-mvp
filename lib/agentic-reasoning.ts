@@ -1,4 +1,5 @@
 import type {
+  ContextSignal,
   ForecastSeriesPoint,
   ProductionGapPoint,
   ReasoningInsight,
@@ -16,6 +17,7 @@ export function generateAgenticInsight(
   weather: WeatherPoint[],
   productionGap: ProductionGapPoint[],
   activeSite: SiteConfig,
+  latestContext?: ContextSignal,
 ): ReasoningInsight {
   const next24Weather = weather.slice(0, 24);
   const next24Gap = productionGap.slice(0, 24);
@@ -28,6 +30,9 @@ export function generateAgenticInsight(
   const avgMfrrSignal = average(next24Forecast.map((point) => point.mfrr));
   const deltaMagnitude = Math.abs(avgGap) + Math.abs(avgTemp * 75) + Math.abs((3.5 - avgWind) * 120);
   const confidenceScore = Math.max(40, Math.min(98, Math.round(58 + deltaMagnitude / 35)));
+  const contextTemp = latestContext?.temp ?? avgTemp;
+  const contextGap = latestContext?.prodConsGap ?? avgGap;
+  const contextWind = latestContext?.windSpeed ?? avgWind;
 
   const drivers: string[] = [];
   const reserveMw = Math.max(0.4, activeSite.capacity * 0.84);
@@ -37,25 +42,33 @@ export function generateAgenticInsight(
   )}MW for the 18:00 auction window.`;
   let confidence: ReasoningInsight["confidence"] = "Medium";
 
-  if (avgWind < 3.5) {
+  if (contextWind < 3.5) {
     drivers.push("Low wind output in SE3 is likely to increase balancing disturbances.");
   } else {
     drivers.push("Wind profile remains supportive for short-term balancing stability.");
   }
 
-  if (avgTemp < -2) {
+  if (contextTemp < -2) {
     drivers.push("Cold front load pressure indicates elevated reserve demand.");
   } else {
     drivers.push("Temperature outlook is moderate with controlled demand pressure.");
   }
 
-  if (avgGap < -450) {
+  if (contextGap < -450) {
     drivers.push("Negative production gap suggests import stress and reserve scarcity.");
   } else {
     drivers.push("Production-consumption gap remains within manageable boundaries.");
   }
 
-  if (avgWind < 3.5 && avgTemp < -2 && avgGap < -450 && avgFcrDSignal > 34) {
+  const marketCandidate = avgFcrDSignal >= avgMfrrSignal ? "FCR-D" : "mFRR";
+  const stressDescriptor = contextGap < -450 ? "high" : contextGap < -220 ? "moderate" : "contained";
+  drivers.unshift(
+    `The temperature is ${contextTemp.toFixed(1)}°C and the Production/Consumption gap is ${Math.round(
+      contextGap,
+    )} MW. This explains the predicted spike in ${marketCandidate} due to grid import stress (${stressDescriptor}).`,
+  );
+
+  if (contextWind < 3.5 && contextTemp < -2 && contextGap < -450 && avgFcrDSignal > 34) {
     summary = `${activeSite.name} (#${activeSite.id}) is currently at ${activeSite.soc}% SOC. Low wind in SE3 + cold front detected, disturbance risk is high.`;
     strategy = `Based on the 48h FCR-D spike prediction, we recommend reserving ${reserveMw.toFixed(
       1,

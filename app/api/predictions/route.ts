@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 
-import { getMarketDataProvider } from "@/lib/data-provider";
+import { getMarketDataProvider, resolveDataSourceMode } from "@/lib/data-provider";
 
 export async function GET() {
-  const provider = getMarketDataProvider();
+  const source = resolveDataSourceMode();
+  const provider = getMarketDataProvider(source);
   const predictions = await provider.getPredictions();
 
   return NextResponse.json({
-    source: process.env.DATA_SOURCE ?? "mock",
+    source,
     collection: "predictions",
     count: predictions.length,
     data: predictions,

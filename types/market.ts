@@ -63,6 +63,20 @@ export interface TimelinePoint {
   budget: number;
 }
 
+export interface ContextSignal {
+  timestamp: string;
+  prodConsGap: number;
+  temp: number;
+  windSpeed: number;
+}
+
+export interface DataConnectionStatus {
+  mode: "mock" | "real";
+  connected: boolean;
+  sourceLabel: string;
+  message?: string;
+}
+
 export interface BudgetLinePoint {
   timestamp: string;
   budget: number;
@@ -100,6 +114,7 @@ export interface ReasoningInsight {
 
 export interface DashboardSnapshot {
   generatedAt: string;
+  connection: DataConnectionStatus;
   activeSite: SiteConfig;
   sites: SiteConfig[];
   forecast: ForecastSeriesPoint[];
@@ -111,4 +126,5 @@ export interface DashboardSnapshot {
   strategyComparison: StrategyComparison;
   reasoning: ReasoningInsight;
   recommendations: RecommendationDoc[];
+  latestContext?: ContextSignal;
 }
