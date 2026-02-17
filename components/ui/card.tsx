@@ -7,7 +7,7 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card"
       className={cn(
-        "glass-card rounded-2xl border border-white/10 shadow-[0_10px_40px_rgba(2,8,25,0.35)]",
+        "glass-card rounded-2xl border border-white/10 shadow-[0_10px_40px_rgba(2,8,25,0.35)] transition-all duration-300 hover:-translate-y-[1px] hover:border-white/20",
         className,
       )}
       {...props}
@@ -16,7 +16,7 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
-  return <div data-slot="card-header" className={cn("px-6 pt-6", className)} {...props} />;
+  return <div data-slot="card-header" className={cn("px-6 pt-6 pb-1", className)} {...props} />;
 }
 
 function CardTitle({ className, ...props }: React.ComponentProps<"h3">) {
@@ -31,7 +31,11 @@ function CardTitle({ className, ...props }: React.ComponentProps<"h3">) {
 
 function CardDescription({ className, ...props }: React.ComponentProps<"p">) {
   return (
-    <p data-slot="card-description" className={cn("text-sm text-slate-400", className)} {...props} />
+    <p
+      data-slot="card-description"
+      className={cn("text-sm leading-relaxed text-slate-400", className)}
+      {...props}
+    />
   );
 }
 

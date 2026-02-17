@@ -1,16 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-
-import {
-  budgetLine,
-  forecastSeries,
-  historicalPrices,
-  predictions,
-  productionGapSeries,
-  recommendations,
-  timelineSeries,
-  weatherSeries,
-} from "@/data/mockData";
 import { getAdminFirestore } from "@/lib/firebase-admin";
 import { getTopMarketRecommendation } from "@/lib/turnover-logic";
 import { getSiteById } from "@/lib/sites";
@@ -43,12 +32,19 @@ function hasFirebaseCredentials() {
 }
 
 export function resolveDataSourceMode(): DataSourceMode {
-  const configured = (process.env.DATA_SOURCE ?? "auto").toLowerCase();
+  const configured = (process.env.DATA_SOURCE ?? "real").toLowerCase();
 
-  if (configured === "mock") return "mock";
-  if (configured === "real") return "real";
+  if (configured === "mock") {
+    throw new Error("Mock mode is disabled in V8. Set DATA_SOURCE=real.");
+  }
 
-  return hasFirebaseCredentials() ? "real" : "mock";
+  if (!hasFirebaseCredentials()) {
+    throw new Error(
+      "Strict real-data mode requires Firebase credentials. Set FIREBASE_PROJECT_ID/FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY or provide a service account file.",
+    );
+  }
+
+  return "real";
 }
 
 type MarketTimelineDoc = {
@@ -105,63 +101,6 @@ export interface MarketDataProvider {
   getProductionGapSeries(): Promise<ProductionGapPoint[]>;
   getLatestContextSignal(): Promise<ContextSignal | undefined>;
   getConnectionStatus(): Promise<DataConnectionStatus>;
-}
-
-class MockMarketDataProvider implements MarketDataProvider {
-  async getPredictions() {
-    return predictions;
-  }
-
-  async getRecommendations() {
-    return recommendations;
-  }
-
-  async getForecastSeries() {
-    return forecastSeries;
-  }
-
-  async getTimelineSeries() {
-    return timelineSeries;
-  }
-
-  async getBudgetLineSeries() {
-    return budgetLine;
-  }
-
-  async getHistoricalPrices() {
-    return historicalPrices;
-  }
-
-  async getWeatherSeries() {
-    return weatherSeries;
-  }
-
-  async getProductionGapSeries() {
-    return productionGapSeries;
-  }
-
-  async getLatestContextSignal() {
-    const weather = weatherSeries[0];
-    const gap = productionGapSeries[0];
-
-    if (!weather || !gap) return undefined;
-
-    return {
-      timestamp: weather.timestamp,
-      prodConsGap: gap.gap_mw,
-      temp: weather.temperature_c,
-      windSpeed: weather.wind_ms,
-    };
-  }
-
-  async getConnectionStatus() {
-    return {
-      mode: "mock",
-      connected: true,
-      sourceLabel: "Mock Data",
-      message: "Using local simulator data",
-    } satisfies DataConnectionStatus;
-  }
 }
 
 class RealMarketDataProvider implements MarketDataProvider {
@@ -367,5 +306,9 @@ class RealMarketDataProvider implements MarketDataProvider {
 
 export function getMarketDataProvider(sourceOverride?: DataSourceMode): MarketDataProvider {
   const source = sourceOverride ?? resolveDataSourceMode();
-  return source === "real" ? new RealMarketDataProvider() : new MockMarketDataProvider();
+  if (source !== "real") {
+    throw new Error("Mock provider is disabled in strict real-data mode.");
+  }
+
+  return new RealMarketDataProvider();
 }

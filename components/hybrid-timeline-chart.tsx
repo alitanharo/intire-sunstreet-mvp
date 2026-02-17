@@ -67,7 +67,7 @@ export function HybridTimelineChart({ timeline }: HybridTimelineChartProps) {
               type="button"
               onClick={() => setEnabled((prev) => ({ ...prev, [line.key]: !prev[line.key] }))}
               className={cn(
-                "transition-all",
+                "transition-all duration-200",
                 enabled[line.key] ? "opacity-100" : "opacity-45 grayscale",
               )}
             >

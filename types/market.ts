@@ -98,6 +98,22 @@ export interface MarketTurnoverPoint {
   trend: "high" | "mid" | "low";
 }
 
+export interface HourlyWinningPoint {
+  timestamp: string;
+  hourLabel: string;
+  market: AncillaryMarket;
+  turnoverSek: number;
+}
+
+export interface MarketDominancePoint {
+  market: AncillaryMarket;
+  winnerHours: number;
+  winnerSharePct: number;
+  turnoverSek: number;
+  currentOptimizedSek: number;
+  trend: "high" | "mid" | "low";
+}
+
 export interface StrategyComparison {
   totalAiStrategyRevenue: number;
   staticFcrnRevenue: number;
@@ -120,8 +136,11 @@ export interface DashboardSnapshot {
   forecast: ForecastSeriesPoint[];
   timeline: TimelinePoint[];
   turnovers: MarketTurnoverPoint[];
+  dominance: MarketDominancePoint[];
+  hourlyWinners: HourlyWinningPoint[];
   topRecommendation: string;
   turnover48hSek: number;
+  dataGapWarning?: string;
   budgetProgressPct: number;
   strategyComparison: StrategyComparison;
   reasoning: ReasoningInsight;
