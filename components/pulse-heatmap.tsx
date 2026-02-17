@@ -30,6 +30,13 @@ const marketStyleMap: Record<MarketTurnoverPoint["market"], { color: string; bg:
   Spot: { color: "#eab308", bg: "rgba(234,179,8,0.22)" },
 };
 
+const marketLabelMap: Record<MarketTurnoverPoint["market"], string> = {
+  Spot: "Spot (Market1)",
+  "FCR-D": "FCR-D (Market2)",
+  mFRR: "mFRR (Market3)",
+  "FCR-N": "FCR-N (Market4)",
+};
+
 function toBoxes(turnovers: MarketTurnoverPoint[], dominance?: MarketDominancePoint[]): HeatmapBox[] {
   const source: MarketDominancePoint[] =
     dominance && dominance.length
@@ -122,7 +129,7 @@ export function PulseHeatmap({ turnovers, dominance }: PulseHeatmapProps) {
               style={{ background: box.bg }}
             >
               <div className="truncate text-lg font-extrabold tracking-wide" style={{ color: box.color }}>
-                {box.name}
+                {marketLabelMap[box.name as MarketTurnoverPoint["market"]] ?? box.name}
               </div>
               <div className="mt-1 truncate text-sm font-semibold text-slate-100 sm:text-base">
                 {formatSek(box.value, 0)}
