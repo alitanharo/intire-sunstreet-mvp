@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { getAdminFirestore } from "@/lib/firebase-admin";
-import { getTopMarketRecommendation } from "@/lib/turnover-logic";
+import { calculateHourlyWinningPath, getTopMarketRecommendation } from "@/lib/turnover-logic";
 import { getSiteById } from "@/lib/sites";
 import type {
   ContextSignal,
@@ -159,9 +159,38 @@ class RealMarketDataProvider implements MarketDataProvider {
   }
 
   async getRecommendations() {
+    const db = getAdminFirestore();
+    const recommendationSnapshot = await db
+      .collection("recommendations")
+      .orderBy("timestamp", "desc")
+      .limit(1)
+      .get();
+
+    const persisted = recommendationSnapshot.docs[0]?.data() as RecommendationDoc | undefined;
+    if (persisted) {
+      return [persisted];
+    }
+
     const forecast = await this.getForecastSeries();
     const site = getSiteById();
     const topMarket = getTopMarketRecommendation(forecast, site);
+    const winners = calculateHourlyWinningPath(forecast, site);
+    const winnerCounts = winners.reduce(
+      (acc, point) => {
+        if (point.market === "FCR-D") acc.fcr += 1;
+        if (point.market === "mFRR") acc.mfrr += 1;
+        if (point.market === "Spot") acc.spot += 1;
+        return acc;
+      },
+      { fcr: 0, mfrr: 0, spot: 0 },
+    );
+    const winnerTotal = Math.max(winners.length, 1);
+    const dynamicSplit = {
+      fcr_split: winnerCounts.fcr / winnerTotal,
+      mfrr_split: winnerCounts.mfrr / winnerTotal,
+      mfrr_cm_split: Math.min(0.2, winnerCounts.mfrr / winnerTotal / 2),
+      spot_split: winnerCounts.spot / winnerTotal,
+    };
 
     const splitMap = {
       "FCR-D": { fcr_split: 0.58, mfrr_split: 0.24, mfrr_cm_split: 0.1, spot_split: 0.08 },
@@ -171,7 +200,10 @@ class RealMarketDataProvider implements MarketDataProvider {
       Spot: { fcr_split: 0.24, mfrr_split: 0.2, mfrr_cm_split: 0.08, spot_split: 0.48 },
     } as const;
 
-    const split = splitMap[topMarket as keyof typeof splitMap] ?? splitMap["FCR-D"];
+    const split =
+      winnerCounts.fcr + winnerCounts.mfrr + winnerCounts.spot > 0
+        ? dynamicSplit
+        : splitMap[topMarket as keyof typeof splitMap] ?? splitMap["FCR-D"];
 
     return [
       {

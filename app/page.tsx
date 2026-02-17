@@ -3,6 +3,11 @@ import { Activity, Clock3, Target, Zap } from "lucide-react";
 import { PulseHeatmap } from "@/components/pulse-heatmap";
 import { Card, CardContent } from "@/components/ui/card";
 import { getDashboardSnapshot } from "@/lib/dashboard-service";
+import {
+  calculateFcrDTurnover,
+  calculateMfrrTurnover,
+  EURO_TO_SEK,
+} from "@/lib/turnover-logic";
 import { formatSek } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +19,44 @@ export default async function Home({
 }) {
   const params = await searchParams;
   const snapshot = await getDashboardSnapshot(params?.site);
+  const latestRecommendation = snapshot.recommendations[0];
+  const currentWindow = snapshot.forecast[0];
+
+  const fallbackCounts = snapshot.hourlyWinners.reduce(
+    (acc, item) => {
+      if (item.market === "FCR-D") acc.fcr += 1;
+      if (item.market === "mFRR") acc.mfrr += 1;
+      if (item.market === "Spot") acc.spot += 1;
+      return acc;
+    },
+    { fcr: 0, mfrr: 0, spot: 0 },
+  );
+  const totalWins = Math.max(snapshot.hourlyWinners.length, 1);
+
+  const effectiveSplit = latestRecommendation
+    ? latestRecommendation
+    : {
+        timestamp: new Date().toISOString(),
+        bid_time_48h: snapshot.forecast.at(-1)?.timestamp ?? new Date().toISOString(),
+        fcr_split: fallbackCounts.fcr / totalWins,
+        mfrr_split: fallbackCounts.mfrr / totalWins,
+        mfrr_cm_split: Math.min(0.2, fallbackCounts.mfrr / totalWins / 2),
+        spot_split: fallbackCounts.spot / totalWins,
+      };
+
+  const turnoverNow = currentWindow
+    ? {
+        fcrD: calculateFcrDTurnover(currentWindow.fcrDUp, currentWindow.fcrDDown) * snapshot.activeSite.capacity,
+        mfrr: calculateMfrrTurnover(currentWindow.mfrr) * snapshot.activeSite.capacity,
+        spot: currentWindow.spot * EURO_TO_SEK * snapshot.activeSite.capacity,
+      }
+    : { fcrD: 0, mfrr: 0, spot: 0 };
+
+  const projectedBenefitSek =
+    effectiveSplit.fcr_split * turnoverNow.fcrD +
+    effectiveSplit.mfrr_split * turnoverNow.mfrr +
+    effectiveSplit.mfrr_cm_split * turnoverNow.mfrr +
+    effectiveSplit.spot_split * turnoverNow.spot;
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-[1400px] px-6 py-8 md:px-10 md:py-10">
@@ -73,10 +116,14 @@ export default async function Home({
               <Target className="h-4 w-4 text-[var(--accent)]" />
               Top Market Recommendation
             </div>
-            <div className="text-3xl font-semibold text-[var(--accent)]">{snapshot.topRecommendation}</div>
+            <div className="text-base font-semibold leading-7 text-[var(--accent)]">
+              Recommended Action: {Math.round(effectiveSplit.fcr_split * 100)}% FCR-D /{" "}
+              {Math.round(effectiveSplit.mfrr_split * 100)}% mFRR /{" "}
+              {Math.round(effectiveSplit.spot_split * 100)}% Spot
+            </div>
             <p className="mt-3 text-sm text-slate-400">
-              Predicted 48h Optimized Potential:{" "}
-              <span className="font-semibold text-slate-200">{formatSek(snapshot.turnover48hSek, 0)}</span>
+              Projected Bidding Window Benefit:{" "}
+              <span className="font-semibold text-slate-200">{formatSek(projectedBenefitSek, 0)}</span>
             </p>
           </CardContent>
         </Card>

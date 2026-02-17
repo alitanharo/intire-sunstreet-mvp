@@ -65,7 +65,7 @@ export function ProofOfAccuracyChart({ timeline }: ProofOfAccuracyChartProps) {
   return (
     <Card className="h-[410px]">
       <CardHeader>
-        <CardTitle>PROOF OF ACCURACY</CardTitle>
+        <CardTitle>PREDICTION CHART</CardTitle>
         <CardDescription>Historical actual vs model prediction ({activeLabel})</CardDescription>
         <div className="mt-4 flex flex-wrap gap-2">
           {marketOptions.map((option) => (
